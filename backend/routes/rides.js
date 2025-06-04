@@ -3,6 +3,20 @@ const Ride = require('../models/Ride');
 const auth = require('../middleware/auth');
 const router = express.Router();
 
+// Get all rides
+router.get('/', async (req, res) => {
+  try {
+    const rides = await Ride.find()
+      .populate('driver', 'name email')
+      .populate('passengers', 'name email')
+      .sort({ date: 1 });
+    res.json(rides);
+  } catch (error) {
+    console.error('Error fetching rides:', error);
+    res.status(500).json({ error: 'Failed to fetch rides' });
+  }
+});
+
 // Get featured rides (most recent with available seats)
 router.get('/featured', async (req, res) => {
   try {
@@ -31,11 +45,18 @@ router.get('/stats', auth, async (req, res) => {
       { $group: { _id: null, count: { $sum: 1 } } }
     ]);
 
+    // Calculate total revenue from completed rides
+    const revenueResult = await Ride.aggregate([
+      { $match: { status: 'completed' } },
+      { $group: { _id: null, total: { $sum: '$price' } } }
+    ]);
+
     res.json({
       totalRides,
       activeRides,
       completedRides,
-      totalPassengers: totalPassengers[0]?.count || 0
+      totalPassengers: totalPassengers[0]?.count || 0,
+      totalRevenue: revenueResult[0]?.total || 0
     });
   } catch (err) {
     console.error('Error fetching ride stats:', err);
@@ -46,7 +67,7 @@ router.get('/stats', auth, async (req, res) => {
 // Get user's rides (both driving and joined)
 router.get('/user', auth, async (req, res) => {
   try {
-    const userId = req.user.user.id;
+    const userId = req.user.id;
     const rides = await Ride.find({
       $or: [
         { driver: userId },
@@ -67,14 +88,17 @@ router.get('/user', auth, async (req, res) => {
 // Get a single ride by ID
 router.get('/:id', async (req, res) => {
   try {
+    console.log('Fetching ride with ID:', req.params.id);
     const ride = await Ride.findById(req.params.id)
       .populate('driver', 'name email rating')
       .populate('passengers', 'name email');
     
     if (!ride) {
+      console.log('Ride not found');
       return res.status(404).json({ error: 'Ride not found' });
     }
     
+    console.log('Ride found:', ride);
     res.json(ride);
   } catch (error) {
     console.error('Error fetching ride:', error);
@@ -104,20 +128,6 @@ router.post('/', auth, async (req, res) => {
   } catch (error) {
     console.error('Error creating ride:', error);
     res.status(500).json({ error: 'Failed to create ride' });
-  }
-});
-
-// Get all rides
-router.get('/', async (req, res) => {
-  try {
-    const rides = await Ride.find()
-      .populate('driver', 'name email')
-      .populate('passengers', 'name email')
-      .sort({ date: 1 });
-    res.json(rides);
-  } catch (error) {
-    console.error('Error fetching rides:', error);
-    res.status(500).json({ error: 'Failed to fetch rides' });
   }
 });
 

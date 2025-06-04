@@ -14,7 +14,7 @@ const RideHistory = () => {
 
   const loadRideHistory = async () => {
     try {
-      const response = await axios.get(`http://localhost:5000/api/rides/history/${userId}`);
+      const response = await axios.get(`https://carpooling-1-wslv.onrender.com/api/rides/history/${userId}`);
       setCompletedRides(response.data);
     } catch (error) {
       console.error('Failed to load ride history:', error);
@@ -23,7 +23,7 @@ const RideHistory = () => {
 
   const handleRating = async (rideId, value) => {
     try {
-      await axios.post(`http://localhost:5000/api/rides/${rideId}/rate`, {
+      await axios.post(`https://carpooling-1-wslv.onrender.com/api/rides/${rideId}/rate`, {
         rating: value,
         userId: userId
       });
@@ -36,7 +36,7 @@ const RideHistory = () => {
   const handleComment = async (rideId) => {
     if (!comment[rideId]) return;
     try {
-      await axios.post(`http://localhost:5000/api/rides/${rideId}/comment`, {
+      await axios.post(`https://carpooling-1-wslv.onrender.com/api/rides/${rideId}/comment`, {
         comment: comment[rideId],
         userId: userId
       });

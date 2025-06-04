@@ -27,7 +27,6 @@ const Messages = () => {
   };
 
   useEffect(() => {
-    // Get user data from localStorage
     const storedUser = localStorage.getItem('user');
     if (storedUser) {
       setUserData(JSON.parse(storedUser));
@@ -38,10 +37,9 @@ const Messages = () => {
   useEffect(() => {
     if (selectedChat) {
       loadMessages(selectedChat._id);
-      // Set up polling for new messages
       const interval = setInterval(() => {
         loadMessages(selectedChat._id);
-      }, 5000); // Poll every 5 seconds
+      }, 5000);
 
       return () => clearInterval(interval);
     }
@@ -58,7 +56,7 @@ const Messages = () => {
 
       const response = await axios.get(`${config.API_URL}/api/chats`, {
         headers: {
-          Authorization: `Bearer ${token}`
+          'Authorization': `Bearer ${token}`
         }
       });
       setChats(response.data);
@@ -75,7 +73,7 @@ const Messages = () => {
       const token = localStorage.getItem('token');
       const response = await axios.get(`${config.API_URL}/api/messages/chat/${chatId}`, {
         headers: {
-          Authorization: `Bearer ${token}`
+          'Authorization': `Bearer ${token}`
         }
       });
       setMessages(response.data);
@@ -97,7 +95,7 @@ const Messages = () => {
         sender: userData._id
       }, {
         headers: {
-          Authorization: `Bearer ${token}`
+          'Authorization': `Bearer ${token}`
         }
       });
 
@@ -123,6 +121,15 @@ const Messages = () => {
     );
   }
 
+  if (error) {
+    return (
+      <div className="error-container">
+        <p className="error-message">{error}</p>
+        <button onClick={() => window.location.reload()}>Retry</button>
+      </div>
+    );
+  }
+
   return (
     <div className="messages-container">
       {showPopup && (
@@ -132,26 +139,34 @@ const Messages = () => {
       )}
       
       <div className="chats-list">
-        <h2>Conversations</h2>
-        {chats.length > 0 ? (
-          chats.map(chat => (
-            <div
-              key={chat._id}
-              className={`chat-item ${selectedChat?._id === chat._id ? 'active' : ''}`}
-              onClick={() => setSelectedChat(chat)}
-            >
-              <div className="chat-participant">
-                {getOtherParticipant(chat)?.name || 'Unknown User'}
-              </div>
-              {chat.unreadCount > 0 && (
-                <span className="unread-badge">{chat.unreadCount}</span>
-              )}
-            </div>
-          ))
+        <h2>Messages</h2>
+        {chats.length === 0 ? (
+          <p className="no-chats">No conversations yet</p>
         ) : (
-          <div className="no-chats">
-            <p>No conversations yet</p>
-          </div>
+          chats.map(chat => {
+            const otherParticipant = getOtherParticipant(chat);
+            return (
+              <div
+                key={chat._id}
+                className={`chat-item ${selectedChat?._id === chat._id ? 'active' : ''}`}
+                onClick={() => setSelectedChat(chat)}
+              >
+                <div className="chat-preview">
+                  <div className="chat-info">
+                    <h3>{otherParticipant?.name || 'Unknown User'}</h3>
+                    <p className="last-message">
+                      {chat.lastMessage?.content || 'No messages yet'}
+                    </p>
+                  </div>
+                </div>
+                {chat.unreadCount?.[userData?._id] > 0 && (
+                  <span className="unread-badge">
+                    {chat.unreadCount[userData._id]}
+                  </span>
+                )}
+              </div>
+            );
+          })
         )}
       </div>
 
@@ -163,47 +178,34 @@ const Messages = () => {
             </div>
             
             <div className="messages-list">
-              {messages.length > 0 ? (
-                messages.map(message => {
-                  const isCurrentUser = message.sender._id === userData?._id;
-                  return (
-                    <div
-                      key={message._id}
-                      className={`message-wrapper ${isCurrentUser ? 'sent' : 'received'}`}
-                    >
-                      {!isCurrentUser && (
-                        <div className="message-sender">
-                          {message.sender.name}
-                        </div>
-                      )}
-                      <div className="message-bubble">
-                        <div className="message-content">{message.content}</div>
-                        <div className="message-footer">
-                          <div className="message-time">
-                            {new Date(message.createdAt).toLocaleTimeString()}
-                          </div>
-                          {isCurrentUser && (
-                            <div className="message-status">
-                              {message.readBy?.length > 1 ? (
-                                <span className="read-status">✓✓</span>
-                              ) : (
-                                <span className="sent-status">✓</span>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      </div>
+              {messages.map(message => (
+                <div
+                  key={message._id}
+                  className={`message-wrapper ${message.sender._id === userData?._id ? 'sent' : 'received'}`}
+                >
+                  <div className="message-bubble">
+                    <div className="message-content">
+                      {message.content}
                     </div>
-                  );
-                })
-              ) : (
-                <div className="no-messages">
-                  <p>No messages yet. Start the conversation!</p>
+                    <div className="message-footer">
+                      <span className="message-time">
+                        {new Date(message.createdAt).toLocaleTimeString([], { 
+                          hour: '2-digit', 
+                          minute: '2-digit' 
+                        })}
+                      </span>
+                      {message.sender._id === userData?._id && (
+                        <span className="message-status">
+                          {message.read ? '✓✓' : '✓'}
+                        </span>
+                      )}
+                    </div>
+                  </div>
                 </div>
-              )}
+              ))}
             </div>
 
-            <form onSubmit={handleSendMessage} className="message-input-form">
+            <form className="message-input-form" onSubmit={handleSendMessage}>
               <input
                 type="text"
                 value={newMessage}
@@ -211,12 +213,14 @@ const Messages = () => {
                 placeholder="Type a message..."
                 className="message-input"
               />
-              <button type="submit" className="send-button">Send</button>
+              <button type="submit" className="send-button">
+                Send
+              </button>
             </form>
           </>
         ) : (
           <div className="no-chat-selected">
-            <p>Select a conversation to view messages</p>
+            <p>Select a conversation to start messaging</p>
           </div>
         )}
       </div>

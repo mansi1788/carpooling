@@ -52,7 +52,7 @@ const Navbar = () => {
       </div>
 
       <div className="navbar-menu">
-      <Link to="/" className="nav-link">Home</Link>
+        <Link to="/" className="nav-link">Home</Link>
         <Link to="/rides" className="nav-link">Find Rides</Link>
         <Link to="/rides/offer" className="nav-link">Offer Ride</Link>
         <Link to="/messages" className="nav-link">Messages</Link>
@@ -71,12 +71,7 @@ const Navbar = () => {
             
             {isProfileOpen && (
               <div className="profile-dropdown">
-                <Link to="/profile" className="dropdown-item">
-                  <i className="fas fa-user"></i> Profile
-                </Link>
-                <Link to="/rides/history" className="dropdown-item">
-                  <i className="fas fa-history"></i> Ride History
-                </Link>
+               
                 <Link to="/dashboard" className="dropdown-item">
                   <i className="fas fa-dashboard"></i> Dashboard
                 </Link>

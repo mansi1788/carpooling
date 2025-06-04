@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import config from '../config';
 import './RideDetails.css';
 
 const RideDetails = () => {
@@ -12,6 +13,7 @@ const RideDetails = () => {
   const [showPopup, setShowPopup] = useState(false);
   const [popupMessage, setPopupMessage] = useState('');
   const [popupType, setPopupType] = useState('');
+  const [loadingTime, setLoadingTime] = useState(0);
 
   const showNotification = (message, type) => {
     setPopupMessage(message);
@@ -26,11 +28,29 @@ const RideDetails = () => {
     const fetchRideDetails = async () => {
       try {
         setLoading(true);
-        const response = await axios.get(`http://localhost:5000/api/rides/${id}`);
+        setLoadingTime(0);
+        console.log('Fetching ride details for ID:', id);
+        console.log('API URL:', `${config.API_URL}/api/rides/${id}`);
+
+        // Start loading timer
+        const timer = setInterval(() => {
+          setLoadingTime(prev => prev + 1);
+        }, 1000);
+
+        const response = await axios.get(`${config.API_URL}/api/rides/${id}`, {
+          timeout: 30000 // 30 second timeout
+        });
+        console.log('Ride details response:', response.data);
         setRide(response.data);
+        clearInterval(timer);
       } catch (error) {
         console.error('Error fetching ride details:', error);
-        setError('Failed to load ride details. Please try again later.');
+        console.error('Error response:', error.response);
+        if (error.code === 'ECONNABORTED') {
+          setError('Request timed out. The server might be starting up. Please try again in a few seconds.');
+        } else {
+          setError('Failed to load ride details. Please try again later.');
+        }
       } finally {
         setLoading(false);
       }
@@ -48,14 +68,14 @@ const RideDetails = () => {
     }
 
     try {
-      await axios.post(`http://localhost:5000/api/rides/${id}/join`, {}, {
+      await axios.post(`${config.API_URL}/api/rides/${id}/join`, {}, {
         headers: {
           Authorization: `Bearer ${token}`
         }
       });
       showNotification('Successfully joined the ride!', 'success');
       // Refresh ride details
-      const response = await axios.get(`http://localhost:5000/api/rides/${id}`);
+      const response = await axios.get(`${config.API_URL}/api/rides/${id}`);
       setRide(response.data);
     } catch (error) {
       console.error('Error joining ride:', error);
@@ -68,6 +88,17 @@ const RideDetails = () => {
       <div className="loading-container">
         <div className="loading-spinner"></div>
         <p>Loading ride details...</p>
+        {loadingTime > 10 && (
+          <p className="loading-warning">
+            This is taking longer than usual. The server might be starting up.
+            Please wait a moment...
+          </p>
+        )}
+        {loadingTime > 30 && (
+          <p className="loading-error">
+            Still loading... You might want to try refreshing the page.
+          </p>
+        )}
       </div>
     );
   }
@@ -91,96 +122,57 @@ const RideDetails = () => {
   }
 
   return (
-    <div className="ride-details-page">
+    <div className="ride-details-container">
       {showPopup && (
         <div className={`popup ${popupType}`}>
           {popupMessage}
         </div>
       )}
 
-      <div className="ride-details-container">
+      <div className="ride-details-card">
         <div className="ride-header">
-          <h1>Ride Details</h1>
-          <div className="price-tag">${ride.price}</div>
+          <h2>{ride.origin} → {ride.destination}</h2>
+          <span className="price">${ride.price}</span>
         </div>
 
-        <div className="ride-info-grid">
-          <div className="info-card">
-            <h3>Route</h3>
-            <div className="route-info">
-              <div className="location">
-                <span className="label">From:</span>
-                <span className="value">{ride.origin}</span>
-              </div>
-              <div className="location">
-                <span className="label">To:</span>
-                <span className="value">{ride.destination}</span>
-              </div>
-            </div>
+        <div className="ride-info">
+          <div className="info-group">
+            <h3>Date & Time</h3>
+            <p>{new Date(ride.date).toLocaleDateString()}</p>
+            <p>{new Date(ride.date).toLocaleTimeString()}</p>
           </div>
 
-          <div className="info-card">
-            <h3>Schedule</h3>
-            <div className="schedule-info">
-              <div className="schedule-item">
-                <span className="label">Date:</span>
-                <span className="value">{new Date(ride.date).toLocaleDateString()}</span>
-              </div>
-              <div className="schedule-item">
-                <span className="label">Time:</span>
-                <span className="value">{ride.time}</span>
-              </div>
-            </div>
+          <div className="info-group">
+            <h3>Driver</h3>
+            <p>{ride.driver?.name || 'Unknown'}</p>
+            {ride.driver?.rating && (
+              <p className="rating">Rating: {ride.driver.rating.toFixed(1)} ⭐</p>
+            )}
           </div>
 
-          <div className="info-card">
-            <h3>Driver Information</h3>
-            <div className="driver-info">
-              <div className="driver-item">
-                <span className="label">Name:</span>
-                <span className="value">{ride.driver?.name || 'Unknown'}</span>
-              </div>
-              <div className="driver-item">
-                <span className="label">Rating:</span>
-                <span className="value">{ride.driver?.rating || 'Not rated'}</span>
-              </div>
-            </div>
+          <div className="info-group">
+            <h3>Seats</h3>
+            <p>Available: {ride.seats - (ride.passengers?.length || 0)}</p>
+            <p>Total: {ride.seats}</p>
           </div>
 
-          <div className="info-card">
-            <h3>Ride Information</h3>
-            <div className="ride-info">
-              <div className="ride-item">
-                <span className="label">Available Seats:</span>
-                <span className="value">{ride.seats}</span>
-              </div>
-              <div className="ride-item">
-                <span className="label">Status:</span>
-                <span className="value">{ride.status}</span>
-              </div>
+          {ride.description && (
+            <div className="info-group">
+              <h3>Description</h3>
+              <p>{ride.description}</p>
             </div>
-          </div>
+          )}
         </div>
 
-        {ride.description && (
-          <div className="description-card">
-            <h3>Description</h3>
-            <p>{ride.description}</p>
-          </div>
-        )}
-
-        <div className="action-buttons">
-          <button 
+        <div className="ride-actions">
+          <button
             className="join-button"
             onClick={handleJoinRide}
-            disabled={ride.seats === 0}
+            disabled={!ride.seats || ride.passengers?.length >= ride.seats}
           >
-            {ride.seats === 0 ? 'No Seats Available' : 'Join Ride'}
+            {!ride.seats || ride.passengers?.length >= ride.seats ? 'No Seats Available' : 'Join Ride'}
           </button>
-          <button 
-            className="back-button"
-            onClick={() => navigate('/rides')}
-          >
+          <button className="back-button" onClick={() => navigate('/rides')}>
             Back to Rides
           </button>
         </div>

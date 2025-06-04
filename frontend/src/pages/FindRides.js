@@ -44,18 +44,14 @@ const FindRides = () => {
   const loadRides = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('token');
-      const response = await axios.get(`${config.API_URL}/api/rides`, {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      });
-      
-      // Only filter out rides if we have user data
-      const filteredRides = userData 
-        ? response.data.filter(ride => ride.driver?._id !== userData._id)
-        : response.data;
-        
+      const response = await axios.get(`${config.API_URL}/api/rides`);
+      let filteredRides = response.data;
+
+      // Filter out rides where user is the driver
+      if (userData) {
+        filteredRides = filteredRides.filter(ride => ride.driver?._id !== userData._id);
+      }
+
       setRides(filteredRides);
       setFilteredRides(filteredRides);
     } catch (error) {
@@ -153,29 +149,29 @@ const FindRides = () => {
       }
 
       // First create a chat with the driver
-      const chatResponse = await axios.post('http://localhost:5000/api/chats/start', {
+      const chatResponse = await axios.post(`${config.API_URL}/api/chats/start`, {
         participants: [userData._id, rideToJoin.driver._id]
       }, {
         headers: {
-          Authorization: `Bearer ${token}`
+          'Authorization': `Bearer ${token}`
         }
       });
 
       // Then send a message
-      await axios.post('http://localhost:5000/api/messages', {
+      await axios.post(`${config.API_URL}/api/messages`, {
         chat: chatResponse.data._id,
         sender: userData._id,
         content: `Hi! I'm interested in joining your ride from ${rideToJoin.origin} to ${rideToJoin.destination} on ${new Date(rideToJoin.date).toLocaleDateString()}.`
       }, {
         headers: {
-          Authorization: `Bearer ${token}`
+          'Authorization': `Bearer ${token}`
         }
       });
 
       // Finally join the ride
-      await axios.post(`http://localhost:5000/api/rides/${rideId}/join`, {}, {
+      await axios.post(`${config.API_URL}/api/rides/${rideId}/join`, {}, {
         headers: {
-          Authorization: `Bearer ${token}`
+          'Authorization': `Bearer ${token}`
         }
       });
 
@@ -200,7 +196,7 @@ const FindRides = () => {
     return (
       <div className="error-container">
         <p className="error-message">{error}</p>
-        <button onClick={loadRides}>Retry</button>
+        <button onClick={() => window.location.reload()}>Retry</button>
       </div>
     );
   }
@@ -293,20 +289,28 @@ const FindRides = () => {
               </div>
               <div className="ride-details">
                 <p><strong>Date:</strong> {new Date(ride.date).toLocaleDateString()}</p>
-                <p><strong>Time:</strong> {ride.time}</p>
-                <p><strong>Available Seats:</strong> {ride.seats}</p>
+                <p><strong>Time:</strong> {new Date(ride.date).toLocaleTimeString()}</p>
+                <p><strong>Available Seats:</strong> {ride.seats - (ride.passengers?.length || 0)}</p>
                 <p><strong>Driver:</strong> {ride.driver?.name || 'Unknown'}</p>
                 {ride.description && (
                   <p><strong>Description:</strong> {ride.description}</p>
                 )}
               </div>
-              <button 
-                className="join-ride-button"
-                onClick={() => handleJoinRide(ride._id)}
-                disabled={ride.seats === 0}
-              >
-                {ride.seats === 0 ? 'No Seats Available' : 'Join Ride'}
-              </button>
+              <div className="ride-actions">
+                <button 
+                  className="join-ride-button"
+                  onClick={() => handleJoinRide(ride._id)}
+                  disabled={!ride.seats || ride.passengers?.length >= ride.seats}
+                >
+                  {!ride.seats || ride.passengers?.length >= ride.seats ? 'Full' : 'Join Ride'}
+                </button>
+                <button
+                  className="view-details-button"
+                  onClick={() => navigate(`/rides/${ride._id}`)}
+                >
+                  View Details
+                </button>
+              </div>
             </div>
           ))
         ) : (

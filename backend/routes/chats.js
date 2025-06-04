@@ -10,7 +10,7 @@ const router = express.Router();
 router.get('/', auth, async (req, res) => {
   try {
     const chats = await Chat.find({
-      participants: req.user.user.id
+      participants: req.user.id
     })
     .populate('participants', 'name email')
     .populate('lastMessage')
@@ -35,7 +35,7 @@ router.get('/:id', auth, async (req, res) => {
     }
 
     // Check if user is a participant
-    if (!chat.participants.some(p => p._id.toString() === req.user.user.id)) {
+    if (!chat.participants.some(p => p._id.toString() === req.user.id)) {
       return res.status(403).json({ error: 'Not authorized' });
     }
 

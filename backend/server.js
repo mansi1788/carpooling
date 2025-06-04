@@ -22,7 +22,7 @@ const server = http.createServer(app);
 // CORS configuration
 const allowedOrigins = [
   'http://localhost:3000',
-  'https://your-frontend-domain.com' // Replace with your actual frontend domain
+  'https://carpooling-95zi.vercel.app'
 ];
 
 const corsOptions = {

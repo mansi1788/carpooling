@@ -1,19 +1,17 @@
 import React, { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
 import config from '../config';
 import './Login.css';
 
 const Login = () => {
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     email: '',
     password: ''
   });
   const [error, setError] = useState('');
-  const [showPopup, setShowPopup] = useState(false);
-  const [popupMessage, setPopupMessage] = useState('');
-  const [popupType, setPopupType] = useState('');
-  const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
 
   const handleChange = (e) => {
     setFormData({
@@ -22,78 +20,59 @@ const Login = () => {
     });
   };
 
-  const showNotification = (message, type) => {
-    setPopupMessage(message);
-    setPopupType(type);
-    setShowPopup(true);
-    setTimeout(() => {
-      setShowPopup(false);
-    }, 3000);
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError('');
+    setLoading(true);
+
     try {
       const response = await axios.post(`${config.API_URL}/api/auth/login`, formData);
-      const token = response.data.token;
-      localStorage.setItem('token', token);
-      showNotification('Login successful! Redirecting...', 'success');
-      
-      // Get user data and store it
-      const userResponse = await axios.get(`${config.API_URL}/api/auth/me`, {
-        headers: { 
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      localStorage.setItem('user', JSON.stringify(userResponse.data));
-      
-      // Force navigation after a short delay
-      setTimeout(() => {
-        navigate('/', { replace: true });
-        window.location.reload(); // Force a page reload to update the navbar
-      }, 1500);
+      localStorage.setItem('token', response.data.token);
+      navigate('/');
     } catch (error) {
       console.error('Login failed:', error.response?.data || error.message);
-      const errorMessage = error.response?.data?.error || 'Login failed';
-      setError(errorMessage);
-      showNotification(errorMessage, 'error');
+      setError(error.response?.data?.error || 'Login failed');
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
     <div className="login-container">
-      {showPopup && (
-        <div className={`popup ${popupType}`}>
-          {popupMessage}
-        </div>
-      )}
-      <form className="login-form" onSubmit={handleSubmit}>
-        <h2>Login</h2>
+      <div className="login-form-container">
+        <h2>Welcome Back</h2>
         {error && <div className="error-message">{error}</div>}
-        <div className="form-group">
-          <label htmlFor="email">Email</label>
-          <input
-            type="email"
-            id="email"
-            name="email"
-            value={formData.email}
-            onChange={handleChange}
-            required
-          />
-        </div>
-        <div className="form-group">
-          <label htmlFor="password">Password</label>
-          <input
-            type="password"
-            id="password"
-            name="password"
-            value={formData.password}
-            onChange={handleChange}
-            required
-          />
-        </div>
-        <button type="submit">Login</button>
-      </form>
+        <form onSubmit={handleSubmit} className="login-form">
+          <div className="form-group">
+            <label htmlFor="email">Email</label>
+            <input
+              type="email"
+              id="email"
+              name="email"
+              value={formData.email}
+              onChange={handleChange}
+              required
+            />
+          </div>
+          <div className="form-group">
+            <label htmlFor="password">Password</label>
+            <input
+              type="password"
+              id="password"
+              name="password"
+              value={formData.password}
+              onChange={handleChange}
+              required
+            />
+          </div>
+          <button type="submit" className="login-button" disabled={loading}>
+            {loading ? 'Logging in...' : 'Log In'}
+          </button>
+        </form>
+        <p className="signup-link">
+          Don't have an account? <Link to="/signup">Sign Up</Link>
+        </p>
+      </div>
     </div>
   );
 };

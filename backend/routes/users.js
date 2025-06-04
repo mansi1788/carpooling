@@ -29,7 +29,7 @@ router.patch('/:id', auth, async (req, res) => {
     }
 
     // Check if user is updating their own profile
-    if (user._id.toString() !== req.user.user.id) {
+    if (user._id.toString() !== req.user.id) {
       return res.status(403).json({ error: 'Not authorized' });
     }
 
