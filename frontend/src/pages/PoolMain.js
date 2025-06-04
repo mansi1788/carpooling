@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import config from '../config';
 import './PoolMain.css';
 
 const PoolMain = () => {
@@ -30,7 +31,7 @@ const PoolMain = () => {
 
   const loadRides = async () => {
     try {
-      const response = await axios.get('http://localhost:5000/api/rides');
+      const response = await axios.get(`${config.API_URL}/api/rides`);
       setRides(response.data);
       setFilteredRides(response.data);
     } catch (error) {

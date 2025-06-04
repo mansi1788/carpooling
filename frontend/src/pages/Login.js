@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
+import config from '../config';
 import './Login.css';
 
 const Login = () => {
@@ -33,13 +34,13 @@ const Login = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const response = await axios.post('http://localhost:5000/api/auth/login', formData);
+      const response = await axios.post(`${config.API_URL}/api/auth/login`, formData);
       const token = response.data.token;
       localStorage.setItem('token', token);
       showNotification('Login successful! Redirecting...', 'success');
       
       // Get user data and store it
-      const userResponse = await axios.get('http://localhost:5000/api/auth/me', {
+      const userResponse = await axios.get(`${config.API_URL}/api/auth/me`, {
         headers: { 
           'Authorization': `Bearer ${token}`
         }

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
+import config from '../config';
 import './FindRides.css';
 
 const FindRides = () => {
@@ -44,7 +45,7 @@ const FindRides = () => {
     try {
       setLoading(true);
       const token = localStorage.getItem('token');
-      const response = await axios.get('http://localhost:5000/api/rides', {
+      const response = await axios.get(`${config.API_URL}/api/rides`, {
         headers: {
           Authorization: `Bearer ${token}`
         }

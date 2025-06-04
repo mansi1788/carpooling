@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import io from 'socket.io-client';
+import { useNavigate } from 'react-router-dom';
+import config from '../config';
 import './DirectMessage.css';
 
 const DirectMessage = () => {
@@ -19,7 +21,7 @@ const DirectMessage = () => {
   const userId = localStorage.getItem('userId');
 
   useEffect(() => {
-    socket.current = io('http://localhost:5000');
+    socket.current = io(config.API_URL);
     
     socket.current.on('message', handleNewMessage);
     socket.current.on('typing', handleTyping);
@@ -45,7 +47,7 @@ const DirectMessage = () => {
 
   const loadConversations = async () => {
     try {
-      const response = await axios.get(`http://localhost:5000/api/messages/conversations/${userId}`);
+      const response = await axios.get(`${config.API_URL}/api/messages/conversations/${userId}`);
       setConversations(response.data);
     } catch (error) {
       console.error('Failed to load conversations:', error);
@@ -54,7 +56,7 @@ const DirectMessage = () => {
 
   const loadMessages = async (chatId) => {
     try {
-      const response = await axios.get(`http://localhost:5000/api/messages/${chatId}`);
+      const response = await axios.get(`${config.API_URL}/api/messages/${chatId}`);
       setMessages(response.data);
     } catch (error) {
       console.error('Failed to load messages:', error);
@@ -125,7 +127,7 @@ const DirectMessage = () => {
       return;
     }
     try {
-      const response = await axios.get(`http://localhost:5000/api/users/search?q=${query}`);
+      const response = await axios.get(`${config.API_URL}/api/users/search?q=${query}`);
       setFilteredUsers(response.data);
     } catch (error) {
       console.error('Failed to search users:', error);
@@ -134,7 +136,7 @@ const DirectMessage = () => {
 
   const startNewChat = async (userId) => {
     try {
-      const response = await axios.post('http://localhost:5000/api/messages/start', {
+      const response = await axios.post(`${config.API_URL}/api/messages/start`, {
         participants: [userId, localStorage.getItem('userId')]
       });
       setConversations(prev => [response.data, ...prev]);

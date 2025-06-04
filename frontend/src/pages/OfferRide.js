@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
+import config from '../config';
 import './OfferRide.css';
 
 const OfferRide = () => {
@@ -54,7 +55,7 @@ const OfferRide = () => {
       }
 
       await axios.post(
-        'http://localhost:5000/api/rides',
+        `${config.API_URL}/api/rides`,
         {
           ...formData,
           driver: userData._id

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
+import config from '../config';
 import './Dashboard.css';
 
 const Dashboard = () => {
@@ -48,12 +49,12 @@ const Dashboard = () => {
       const userData = JSON.parse(storedUser);
       
       // Fetch user's rides (both driving and riding)
-      const ridesResponse = await axios.get('http://localhost:5000/api/rides/user', {
+      const ridesResponse = await axios.get(`${config.API_URL}/api/rides/user`, {
         headers: { Authorization: `Bearer ${token}` }
       });
 
       // Fetch ride statistics
-      const statsResponse = await axios.get('http://localhost:5000/api/rides/stats', {
+      const statsResponse = await axios.get(`${config.API_URL}/api/rides/stats`, {
         headers: { Authorization: `Bearer ${token}` }
       });
 

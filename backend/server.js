@@ -48,7 +48,12 @@ console.log('Routes set up complete');
 
 // Connect to MongoDB
 console.log('Connecting to MongoDB...');
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/rideshare';
+if (!process.env.MONGODB_URI) {
+  console.error('FATAL ERROR: MONGODB_URI is not defined in environment variables.');
+  process.exit(1);
+}
+
+const MONGODB_URI = process.env.MONGODB_URI;
 console.log('MongoDB URI:', MONGODB_URI.replace(/\/\/[^:]+:[^@]+@/, '//<credentials>@')); // Log URI with credentials masked
 
 mongoose.connect(MONGODB_URI)

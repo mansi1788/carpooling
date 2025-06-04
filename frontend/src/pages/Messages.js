@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
+import config from '../config';
 import './Messages.css';
 
 const Messages = () => {
@@ -55,7 +56,7 @@ const Messages = () => {
         return;
       }
 
-      const response = await axios.get('http://localhost:5000/api/chats', {
+      const response = await axios.get(`${config.API_URL}/api/chats`, {
         headers: {
           Authorization: `Bearer ${token}`
         }
@@ -72,7 +73,7 @@ const Messages = () => {
   const loadMessages = async (chatId) => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get(`http://localhost:5000/api/messages/chat/${chatId}`, {
+      const response = await axios.get(`${config.API_URL}/api/messages/chat/${chatId}`, {
         headers: {
           Authorization: `Bearer ${token}`
         }
@@ -90,7 +91,7 @@ const Messages = () => {
 
     try {
       const token = localStorage.getItem('token');
-      await axios.post('http://localhost:5000/api/messages', {
+      await axios.post(`${config.API_URL}/api/messages`, {
         chat: selectedChat._id,
         content: newMessage,
         sender: userData._id
