@@ -50,8 +50,11 @@ const FindRides = () => {
         }
       });
       
-      // Filter out rides where current user is the driver
-      const filteredRides = response.data.filter(ride => ride.driver._id !== userData?._id);
+      // Only filter out rides if we have user data
+      const filteredRides = userData 
+        ? response.data.filter(ride => ride.driver?._id !== userData._id)
+        : response.data;
+        
       setRides(filteredRides);
       setFilteredRides(filteredRides);
     } catch (error) {
@@ -131,10 +134,20 @@ const FindRides = () => {
         return;
       }
 
+      if (!userData || !userData._id) {
+        showNotification('User data not loaded. Please try again.', 'error');
+        return;
+      }
+
       // Find the ride object
       const rideToJoin = rides.find(r => r._id === rideId);
       if (!rideToJoin) {
         showNotification('Ride not found', 'error');
+        return;
+      }
+
+      if (!rideToJoin.driver || !rideToJoin.driver._id) {
+        showNotification('Driver information not available', 'error');
         return;
       }
 

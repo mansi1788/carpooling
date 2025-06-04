@@ -76,6 +76,9 @@ const Navbar = () => {
                 <Link to="/rides/history" className="dropdown-item">
                   <i className="fas fa-history"></i> Ride History
                 </Link>
+                <Link to="/dashboard" className="dropdown-item">
+                  <i className="fas fa-dashboard"></i> Dashboard
+                </Link>
                 <Link to="/messages" className="dropdown-item">
                   <i className="fas fa-envelope"></i> Messages
                 </Link>

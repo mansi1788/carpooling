@@ -48,10 +48,10 @@ console.log('Routes set up complete');
 
 // Connect to MongoDB
 console.log('Connecting to MongoDB...');
-mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/rideshare', {
-  useNewUrlParser: true,
-  useUnifiedTopology: true
-})
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/rideshare';
+console.log('MongoDB URI:', MONGODB_URI.replace(/\/\/[^:]+:[^@]+@/, '//<credentials>@')); // Log URI with credentials masked
+
+mongoose.connect(MONGODB_URI)
 .then(() => console.log('Connected to MongoDB'))
 .catch(err => {
   console.error('MongoDB connection error:', err);

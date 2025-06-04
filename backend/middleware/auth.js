@@ -10,7 +10,7 @@ const auth = async (req, res, next) => {
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = decoded;
+    req.user = decoded; // Keep the original structure { user: { id: ... } }
     next();
   } catch (error) {
     res.status(401).json({ error: 'Please authenticate' });

@@ -20,6 +20,50 @@ router.get('/featured', async (req, res) => {
   }
 });
 
+// Get ride statistics
+router.get('/stats', auth, async (req, res) => {
+  try {
+    const totalRides = await Ride.countDocuments();
+    const activeRides = await Ride.countDocuments({ status: 'scheduled' });
+    const completedRides = await Ride.countDocuments({ status: 'completed' });
+    const totalPassengers = await Ride.aggregate([
+      { $unwind: '$passengers' },
+      { $group: { _id: null, count: { $sum: 1 } } }
+    ]);
+
+    res.json({
+      totalRides,
+      activeRides,
+      completedRides,
+      totalPassengers: totalPassengers[0]?.count || 0
+    });
+  } catch (err) {
+    console.error('Error fetching ride stats:', err);
+    res.status(500).json({ error: 'Error fetching ride statistics' });
+  }
+});
+
+// Get user's rides (both driving and joined)
+router.get('/user', auth, async (req, res) => {
+  try {
+    const userId = req.user.user.id;
+    const rides = await Ride.find({
+      $or: [
+        { driver: userId },
+        { passengers: userId }
+      ]
+    })
+    .populate('driver', 'name email')
+    .populate('passengers', 'name email')
+    .sort({ date: -1 });
+
+    res.json(rides);
+  } catch (error) {
+    console.error('Error fetching user rides:', error);
+    res.status(500).json({ error: 'Failed to fetch user rides' });
+  }
+});
+
 // Get a single ride by ID
 router.get('/:id', async (req, res) => {
   try {
@@ -86,7 +130,7 @@ router.post('/:id/join', auth, async (req, res) => {
     }
 
     // Check if user is already a passenger
-    if (ride.passengers.includes(req.user.user.id)) {
+    if (ride.passengers.includes(req.user.id)) {
       return res.status(400).json({ error: 'You have already joined this ride' });
     }
 
@@ -96,7 +140,7 @@ router.post('/:id/join', auth, async (req, res) => {
     }
 
     // Add user to passengers
-    ride.passengers.push(req.user.user.id);
+    ride.passengers.push(req.user.id);
     await ride.save();
 
     res.json(ride);

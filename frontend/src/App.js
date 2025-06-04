@@ -11,6 +11,7 @@ import Messages from './pages/Messages';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import RideDetails from './pages/RideDetails';
+import PrivateRoute from './components/PrivateRoute';
 import './App.css';
 
 function App() {
@@ -22,7 +23,7 @@ function App() {
           <Route path="/" element={<Home />} />
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
-          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
           <Route path="/pool" element={<PoolMain />} />
           <Route path="/rides/offer" element={<OfferRide />} />
           <Route path="/rides" element={<FindRides />} />

@@ -1,136 +1,201 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
 import './Dashboard.css';
 
 const Dashboard = () => {
-  const [offeredRides, setOfferedRides] = useState([]);
-  const [joinedRides, setJoinedRides] = useState([]);
-  const [selectedRide, setSelectedRide] = useState(null);
-  const [showModal, setShowModal] = useState(false);
-  const [message, setMessage] = useState('');
-  const [messageSent, setMessageSent] = useState(false);
-  const userId = localStorage.getItem('userId'); // This should be set on login/signup
+  const navigate = useNavigate();
+  const [userData, setUserData] = useState(null);
+  const [stats, setStats] = useState({
+    totalRides: 0,
+    activeRides: 0,
+    completedRides: 0,
+    totalPassengers: 0
+  });
+  const [userRides, setUserRides] = useState({
+    driving: [],
+    riding: []
+  });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   useEffect(() => {
-    if (userId) {
-      loadMyRides();
+    const token = localStorage.getItem('token');
+    if (!token) {
+      navigate('/login');
+      return;
     }
-  }, [userId]);
 
-  const loadMyRides = async () => {
-    try {
-      const response = await axios.get('http://localhost:5000/api/rides');
-      setOfferedRides(response.data.filter(ride => ride.driver?._id === userId));
-      setJoinedRides(response.data.filter(ride => ride.passengers?.includes(userId)));
-    } catch (error) {
-      console.error('Failed to load my rides:', error);
+    const storedUser = localStorage.getItem('user');
+    if (storedUser) {
+      setUserData(JSON.parse(storedUser));
     }
-  };
 
-  const openModal = (ride) => {
-    setSelectedRide(ride);
-    setShowModal(true);
-    setMessage('');
-    setMessageSent(false);
-  };
+    loadDashboardData();
+  }, [navigate]);
 
-  const closeModal = () => {
-    setShowModal(false);
-    setSelectedRide(null);
-    setMessage('');
-    setMessageSent(false);
-  };
-
-  const handleSendMessage = async () => {
-    if (!message.trim() || !selectedRide) return;
+  const loadDashboardData = async () => {
     try {
-      await axios.post('http://localhost:5000/api/messages', {
-        sender: userId,
-        receiver: selectedRide.driver._id,
-        content: message
+      setLoading(true);
+      const token = localStorage.getItem('token');
+      const storedUser = localStorage.getItem('user');
+      
+      if (!token || !storedUser) {
+        setError('Please log in to view your dashboard');
+        return;
+      }
+
+      const userData = JSON.parse(storedUser);
+      
+      // Fetch user's rides (both driving and riding)
+      const ridesResponse = await axios.get('http://localhost:5000/api/rides/user', {
+        headers: { Authorization: `Bearer ${token}` }
       });
-      setMessageSent(true);
-      setMessage('');
+
+      // Fetch ride statistics
+      const statsResponse = await axios.get('http://localhost:5000/api/rides/stats', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      // Separate rides into driving and riding
+      const driving = ridesResponse.data.filter(ride => ride.driver?._id === userData._id);
+      const riding = ridesResponse.data.filter(ride => 
+        ride.passengers?.some(passenger => passenger._id === userData._id)
+      );
+
+      setUserRides({ driving, riding });
+      setStats(statsResponse.data);
+      setUserData(userData);
     } catch (error) {
-      console.error('Failed to send message:', error);
+      console.error('Error loading dashboard data:', error);
+      if (error.response?.status === 401) {
+        setError('Your session has expired. Please log in again.');
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        navigate('/login');
+      } else {
+        setError(error.response?.data?.error || 'Failed to load dashboard data. Please try again.');
+      }
+    } finally {
+      setLoading(false);
     }
   };
+
+  const formatDate = (dateString) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  if (loading) {
+    return (
+      <div className="loading-container">
+        <div className="loading-spinner"></div>
+        <p>Loading dashboard...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="error-container">
+        <p className="error-message">{error}</p>
+        <button onClick={loadDashboardData}>Retry</button>
+      </div>
+    );
+  }
 
   return (
     <div className="dashboard-container">
-      <h2 className="dashboard-title">Your Dashboard</h2>
-      <div className="my-rides-section">
-        <h3>Rides You've Offered</h3>
-        {offeredRides.length === 0 ? (
-          <p className="no-rides">You haven't offered any rides yet.</p>
-        ) : (
-          <div className="rides-grid">
-            {offeredRides.map(ride => (
-              <div key={ride._id} className="ride-card" onClick={() => openModal(ride)} style={{ cursor: 'pointer' }}>
-                <div className="ride-info">
-                  <p><strong>From:</strong> {ride.origin}</p>
-                  <p><strong>To:</strong> {ride.destination}</p>
-                  <p><strong>Date:</strong> {new Date(ride.date).toLocaleString()}</p>
-                  <p><strong>Seats:</strong> {ride.seats}</p>
-                  <p><strong>Price:</strong> ${ride.price}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
+      <div className="dashboard-header">
+        <h1>Welcome, {userData?.name}</h1>
+        <button 
+          className="create-ride-button"
+          onClick={() => navigate('/create-ride')}
+        >
+          Create New Ride
+        </button>
       </div>
-      <div className="my-rides-section">
-        <h3>Rides You've Joined</h3>
-        {joinedRides.length === 0 ? (
-          <p className="no-rides">You haven't joined any rides yet.</p>
-        ) : (
-          <div className="rides-grid">
-            {joinedRides.map(ride => (
-              <div key={ride._id} className="ride-card" onClick={() => openModal(ride)} style={{ cursor: 'pointer' }}>
-                <div className="ride-info">
-                  <p><strong>From:</strong> {ride.origin}</p>
-                  <p><strong>To:</strong> {ride.destination}</p>
-                  <p><strong>Date:</strong> {new Date(ride.date).toLocaleString()}</p>
-                  <p><strong>Seats:</strong> {ride.seats}</p>
-                  <p><strong>Price:</strong> ${ride.price}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-      {showModal && selectedRide && (
-        <div className="ride-modal-overlay" onClick={closeModal}>
-          <div className="ride-modal" onClick={e => e.stopPropagation()}>
-            <button className="close-modal" onClick={closeModal}>&times;</button>
-            <h3>Ride Details</h3>
-            <div className="ride-info-modal">
-              <p><strong>From:</strong> {selectedRide.origin}</p>
-              <p><strong>To:</strong> {selectedRide.destination}</p>
-              <p><strong>Date:</strong> {new Date(selectedRide.date).toLocaleString()}</p>
-              <p><strong>Seats:</strong> {selectedRide.seats}</p>
-              <p><strong>Price:</strong> ${selectedRide.price}</p>
-              <p><strong>Driver:</strong> {selectedRide.driver?.name} ({selectedRide.driver?.email})</p>
-            </div>
-            <div className="contact-driver">
-              <h4>Contact Driver</h4>
-              {messageSent ? (
-                <p className="message-sent">Message sent!</p>
-              ) : (
-                <>
-                  <textarea
-                    value={message}
-                    onChange={e => setMessage(e.target.value)}
-                    placeholder="Type your message..."
-                    rows={3}
-                  />
-                  <button className="send-message-btn" onClick={handleSendMessage}>Send Message</button>
-                </>
-              )}
-            </div>
-          </div>
+
+      <div className="stats-grid">
+        <div className="stat-card">
+          <h3>Total Rides</h3>
+          <p>{stats.totalRides}</p>
         </div>
-      )}
+        <div className="stat-card">
+          <h3>Active Rides</h3>
+          <p>{stats.activeRides}</p>
+        </div>
+        <div className="stat-card">
+          <h3>Completed Rides</h3>
+          <p>{stats.completedRides}</p>
+        </div>
+        <div className="stat-card">
+          <h3>Total Passengers</h3>
+          <p>{stats.totalPassengers}</p>
+        </div>
+      </div>
+
+      <div className="rides-section">
+        <div className="rides-column">
+          <h2>Rides You're Driving</h2>
+          {userRides.driving.length > 0 ? (
+            userRides.driving.map(ride => (
+              <div key={ride._id} className="ride-card">
+                <div className="ride-header">
+                  <h3>{ride.origin} → {ride.destination}</h3>
+                  <span className="price">${ride.price}</span>
+                </div>
+                <div className="ride-details">
+                  <p><strong>Date:</strong> {formatDate(ride.date)}</p>
+                  <p><strong>Available Seats:</strong> {ride.seats}</p>
+                  <p><strong>Status:</strong> {ride.status}</p>
+                  <p><strong>Passengers:</strong> {ride.passengers.length}</p>
+                </div>
+                <button 
+                  className="view-details-button"
+                  onClick={() => navigate(`/rides/${ride._id}`)}
+                >
+                  View Details
+                </button>
+              </div>
+            ))
+          ) : (
+            <p className="no-rides">No rides created yet</p>
+          )}
+        </div>
+
+        <div className="rides-column">
+          <h2>Rides You're Joining</h2>
+          {userRides.riding.length > 0 ? (
+            userRides.riding.map(ride => (
+              <div key={ride._id} className="ride-card">
+                <div className="ride-header">
+                  <h3>{ride.origin} → {ride.destination}</h3>
+                  <span className="price">${ride.price}</span>
+                </div>
+                <div className="ride-details">
+                  <p><strong>Date:</strong> {formatDate(ride.date)}</p>
+                  <p><strong>Driver:</strong> {ride.driver.name}</p>
+                  <p><strong>Status:</strong> {ride.status}</p>
+                </div>
+                <button 
+                  className="view-details-button"
+                  onClick={() => navigate(`/rides/${ride._id}`)}
+                >
+                  View Details
+                </button>
+              </div>
+            ))
+          ) : (
+            <p className="no-rides">No rides joined yet</p>
+          )}
+        </div>
+      </div>
     </div>
   );
 };
